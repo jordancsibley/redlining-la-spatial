@@ -1,7 +1,7 @@
 ---
 title: "Homework Assignment #2"
 subtitle: "Exploring patterns of environmental justice"
-author: "UPDATE WITH YOUR NAME"
+author: "Jordan Sibley"
 date: last-modified
 execute: 
   eval: false
@@ -12,9 +12,49 @@ editor_options:
   chunk_output_type: console
 ---
 
+## Set up 
+```{r}
+# load libraries 
+library(tidyverse)
+library(tmap)
+library(dplyr)
+library(sf)
+```
+
+```{r}
+# read in data
+
+```
+
+
 ## Part 1: Legacy of redlining in current environmental (in)justice
 
+Your first task is to explore historical redlining in Los Angeles and its legacy on present-day environmental justice.
+
+#### Description
+
+1.  a map of historical redlining neighborhoods, including:
+
+-   neighborhoods colored by HOLC grade
+-   an appropriate base map
+
+2.  a table summarizing the percent of current census block groups within each HOLC grade (or none)
+
+3.  a set of figures summarizing current conditions (from the EJScreen data) within HOLC grades using the mean of the following variables:
+
+-   \% low income
+-   percentile for Particulate Matter 2.5
+-   percentile for low life expectancy
+
+4.  brief paragraph reflecting on these results
 
 ## Part 2: Legacy of redlining in biodiversity observations
 
+Your second task is to explore the legacy of historical redlining in Los Angeles on the collection of bird observations.
 
+#### Description
+
+For this assignment, you must produce the following based on observations from 2022:
+
+1.  a figure summarizing the percent of observations within redlined neighborhoods within each HOLC grade
+2.  a brief paragraph explaining whether these results match the findings from Ellis-Soto et al. 2023
