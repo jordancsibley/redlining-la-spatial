@@ -4,28 +4,93 @@ subtitle: "Exploring patterns of environmental justice"
 author: "Jordan Sibley"
 date: last-modified
 execute: 
-  eval: false
+  eval: true
+  message: false
+  warning: false
 format:
   html:
     toc: true
 editor_options: 
   chunk_output_type: console
+code-fold: true
 ---
 
-## Set up 
+## Set up
+
 ```{r}
 # load libraries 
 library(tidyverse)
+library(here)
 library(tmap)
 library(dplyr)
 library(sf)
+
 ```
 
 ```{r}
-# read in data
+# read in data 
 
+la_map <- sf::st_read(here::here("data", "mapping-inequality", "mapping-inequality-los-angeles.json"))
+
+la_birds <- sf::st_read(here::here("data", "gbif-birds-LA", "gbif-birds-LA.shp"))
+
+ejscreen <- sf::st_read(here::here("data","ejscreen","EJSCREEN_2023_BG_StatePct_with_AS_CNMI_GU_VI.gdb")) 
 ```
 
+## Cleaning Data
+
+```{r}
+# going to filter ejscreen to only include counties that make up the greater LA area 
+
+la_ej <- ejscreen %>% 
+  filter(STATE_NAME == "California") %>% 
+  filter(CNTY_NAME %in% c("Los Angeles County", "San Bernardino County", "Orange County"))
+```
+
+## Exploring the Data
+
+#### Looking at the class
+
+```{r}
+class(la_map) 
+
+class(la_ej)
+```
+
+Both data sets are sf data frames.
+
+#### Determining the Coordinate Reference Systems
+
+```{r}
+# check the crs of la_map
+st_crs(la_map)
+
+# check the crs of ejscreen 
+st_crs(la_ej)
+
+# check that the coordinate reference systems match 
+if(st_crs(la_map) == st_crs(la_ej)) {
+  print("The coordinate reference systems match")
+} else {
+  warning("The coordinate reference systems do NOT match. Transformation of CRS is recommended.")
+}
+```
+
+The CRS of `la_map` and `la_ej` are not the same. In order to use these two data sets in the same map, the CRS of one needs to be transformed to match the other
+
+```{r}
+# ensures the CRS of the two datasets will match 
+la_ej_match = st_transform(la_ej, crs = st_crs(la_map))
+
+# check to see if that worked 
+if(st_crs(la_map) == st_crs(la_ej_match)) {
+  print("The coordinate reference systems now match")
+} else {
+  warning("The coordinate reference systems still do NOT match. Check that you did the transformation correctly")
+}
+```
+
+Now the CRS of each data set is matched. 
 
 ## Part 1: Legacy of redlining in current environmental (in)justice
 
@@ -37,6 +102,38 @@ Your first task is to explore historical redlining in Los Angeles and its legacy
 
 -   neighborhoods colored by HOLC grade
 -   an appropriate base map
+
+TIP FROM SLACK: part 1 asks for an appropriate basemap: this just means that LA shouldn't be floating out in space. at minimum, you should include the coastline. that means you will need geometries to **define the areas outside of LA**. the simplest method would be to use the state-level EJScreen dataset, but kudos to anyone who brings extra data for a more advanced basemap
+
+-   See what map from la_map produces. Figure out if including lines from surrounding counties would be helpful
+
+```{r}
+tm_shape(la_ej_match) +
+  tm_fill()
+```
+
+
+
+
+```{r}
+bbox_la <- st_bbox(la_map)
+
+tm_shape(la_ej_match, bbox = bbox_la) +
+  tm_borders() +
+tm_shape(la_map) +
+  tm_polygons("grade", # la map colored by grade 
+              palette = c("#76a865", "#7cb5bd", "#ffff00", "#d9838d"))  
+
+
+             
+```
+
+**POTENTIAL QUESTION FOR OFFICE HOURS** What does this error message mean?: `Warning message:
+The shape la_map is invalid. See sf::st_is_valid `
+
+- How to make bounding box larger 
+
+
 
 2.  a table summarizing the percent of current census block groups within each HOLC grade (or none)
 
