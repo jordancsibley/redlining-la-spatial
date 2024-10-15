@@ -43,8 +43,9 @@ ejscreen <- sf::st_read(here::here("data","ejscreen","EJSCREEN_2023_BG_StatePct_
 # going to filter ejscreen to only include counties that make up the greater LA area 
 
 la_ej <- ejscreen %>% 
-  filter(STATE_NAME == "California") %>% 
-  filter(CNTY_NAME %in% c("Los Angeles County", "San Bernardino County", "Orange County"))
+  dplyr::filter(STATE_NAME == "California") %>% 
+  dplyr::filter(CNTY_NAME %in% c("Los Angeles County", "San Bernardino County", "Orange County")) %>% 
+  dplyr::filter((ID != '060379902000') & (ID != '060379903000')) # remove blocks in are in the ocean
 ```
 
 ## Exploring the Data
@@ -80,10 +81,10 @@ The CRS of `la_map` and `la_ej` are not the same. In order to use these two data
 
 ```{r}
 # ensures the CRS of the two datasets will match 
-la_ej_match = st_transform(la_ej, crs = st_crs(la_map))
+la_map_match = st_transform(la_map, crs = st_crs(la_ej))
 
 # check to see if that worked 
-if(st_crs(la_map) == st_crs(la_ej_match)) {
+if(st_crs(la_map_match) == st_crs(la_ej)) {
   print("The coordinate reference systems now match")
 } else {
   warning("The coordinate reference systems still do NOT match. Check that you did the transformation correctly")
@@ -108,21 +109,28 @@ TIP FROM SLACK: part 1 asks for an appropriate basemap: this just means that LA 
 -   See what map from la_map produces. Figure out if including lines from surrounding counties would be helpful
 
 ```{r}
-tm_shape(la_ej_match) +
+
+tm_shape(la_ej, bbox = bbox_la) +
   tm_fill()
 ```
 
 
-
-
 ```{r}
-bbox_la <- st_bbox(la_map)
+tmap_mode('plot')
+bbox_la <- st_bbox(la_map_match)
 
-tm_shape(la_ej_match, bbox = bbox_la) +
-  tm_borders() +
-tm_shape(la_map) +
+
+tm_shape(la_ej, bbox = bbox_la) +
+  tm_polygons(col = "#EFDECD") + # county background color 
+tm_shape(la_ej) +
+  tm_borders(col = "#D6BA98") + # block border colors 
+tm_shape(la_map_match) +
   tm_polygons("grade", # la map colored by grade 
-              palette = c("#76a865", "#7cb5bd", "#ffff00", "#d9838d"))  
+              palette = c("#76a865", "#7cb5bd", "#ffff00", "#d9838d")) +
+  tm_credits("Pacific Ocean",
+             position = c(0.08, 0.1)) + # MOVE to better spot 
+  tm_layout(bg.color = "#D7F7FD", # blue background color 
+             legend.outside = TRUE)
 
 
              
@@ -136,6 +144,9 @@ The shape la_map is invalid. See sf::st_is_valid `
 
 
 2.  a table summarizing the percent of current census block groups within each HOLC grade (or none)
+
+st_intersect is most appropriate 
+kable to make table kableExtra
 
 3.  a set of figures summarizing current conditions (from the EJScreen data) within HOLC grades using the mean of the following variables:
 
