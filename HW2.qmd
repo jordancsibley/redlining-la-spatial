@@ -11,9 +11,10 @@ format:
   html:
     toc: true
 editor_options: 
-  chunk_output_type: console
 code-fold: true
 ---
+
+Note to self: When I render this, there are messages that pop up when reading in the data, how do I fix this?
 
 ## Set up
 
@@ -30,7 +31,7 @@ library(sf)
 ```{r}
 # read in data 
 
-la_map <- sf::st_read(here::here("data", "mapping-inequality", "mapping-inequality-los-angeles.json"))
+la_holc <- sf::st_read(here::here("data", "mapping-inequality", "mapping-inequality-los-angeles.json"))
 
 la_birds <- sf::st_read(here::here("data", "gbif-birds-LA", "gbif-birds-LA.shp"))
 
@@ -40,7 +41,7 @@ ejscreen <- sf::st_read(here::here("data","ejscreen","EJSCREEN_2023_BG_StatePct_
 ## Cleaning Data
 
 ```{r}
-# going to filter ejscreen to only include counties that make up the greater LA area 
+# filtering ejscreen to only include counties that make up the greater LA area 
 
 la_ej <- ejscreen %>% 
   dplyr::filter(STATE_NAME == "California") %>% 
@@ -48,12 +49,18 @@ la_ej <- ejscreen %>%
   dplyr::filter((ID != '060379902000') & (ID != '060379903000')) # remove blocks in are in the ocean
 ```
 
+```{r}
+# removing NA values in the 'grade' column of la_holc
+la_holc <- la_holc %>% 
+  filter(!is.na(grade)) # remove the 1 NA value
+```
+
 ## Exploring the Data
 
 #### Looking at the class
 
 ```{r}
-class(la_map) 
+class(la_holc) 
 
 class(la_ej)
 ```
@@ -63,28 +70,22 @@ Both data sets are sf data frames.
 #### Determining the Coordinate Reference Systems
 
 ```{r}
-# check the crs of la_map
-st_crs(la_map)
-
-# check the crs of ejscreen 
-st_crs(la_ej)
-
 # check that the coordinate reference systems match 
-if(st_crs(la_map) == st_crs(la_ej)) {
+if(st_crs(la_holc) == st_crs(la_ej)) {
   print("The coordinate reference systems match")
 } else {
-  warning("The coordinate reference systems do NOT match. Transformation of CRS is recommended.")
+  print("The coordinate reference systems do NOT match. Transformation of CRS is recommended.")
 }
 ```
 
-The CRS of `la_map` and `la_ej` are not the same. In order to use these two data sets in the same map, the CRS of one needs to be transformed to match the other
+The CRS of `la_holc` and `la_ej` are not the same. In order to use these two data sets in the same map, the CRS of one needs to be transformed to match the other
 
 ```{r}
 # ensures the CRS of the two datasets will match 
-la_map_match = st_transform(la_map, crs = st_crs(la_ej))
+la_holc = st_transform(la_holc, crs = st_crs(la_ej))
 
 # check to see if that worked 
-if(st_crs(la_map_match) == st_crs(la_ej)) {
+if(st_crs(la_holc) == st_crs(la_ej)) {
   print("The coordinate reference systems now match")
 } else {
   warning("The coordinate reference systems still do NOT match. Check that you did the transformation correctly")
@@ -104,42 +105,36 @@ Your first task is to explore historical redlining in Los Angeles and its legacy
 -   neighborhoods colored by HOLC grade
 -   an appropriate base map
 
-TIP FROM SLACK: part 1 asks for an appropriate basemap: this just means that LA shouldn't be floating out in space. at minimum, you should include the coastline. that means you will need geometries to **define the areas outside of LA**. the simplest method would be to use the state-level EJScreen dataset, but kudos to anyone who brings extra data for a more advanced basemap
-
--   See what map from la_map produces. Figure out if including lines from surrounding counties would be helpful
-
 ```{r}
 
-tm_shape(la_ej, bbox = bbox_la) +
-  tm_fill()
-```
-
-
-```{r}
+# map of la county with the holc grades 
 tmap_mode('plot')
-bbox_la <- st_bbox(la_map_match)
+bbox_la <- st_bbox(la_holc) # bounding box to area of county with holc grades 
 
 
 tm_shape(la_ej, bbox = bbox_la) +
   tm_polygons(col = "#EFDECD") + # county background color 
 tm_shape(la_ej) +
   tm_borders(col = "#D6BA98") + # block border colors 
-tm_shape(la_map_match) +
+tm_shape(la_holc) +
   tm_polygons("grade", # la map colored by grade 
-              palette = c("#76a865", "#7cb5bd", "#ffff00", "#d9838d")) +
-  tm_credits("Pacific Ocean",
-             position = c(0.08, 0.1)) + # MOVE to better spot 
+              palette = c("#76a865", "#7cb5bd", "#ffff00", "#d9838d"),
+              title = "HOLC Grade") +
+  tm_credits("Pacific Ocean", position = c(0.03, 0.3)) + # pacific ocean label 
+   
+  tm_scale_bar(position = c(0.65, 0.9)) + # scale bar
+  tm_compass(position = c(0.6, 0.9), size = 1)+ # compass
   tm_layout(bg.color = "#D7F7FD", # blue background color 
-             legend.outside = TRUE)
+            legend.outside = TRUE,
+            main.title = "Los Angeles County Historic Redlining Neighborhoods",
+            ) 
+   
 
-
-             
 ```
 
-**POTENTIAL QUESTION FOR OFFICE HOURS** What does this error message mean?: `Warning message:
-The shape la_map is invalid. See sf::st_is_valid `
+Need to figure out how to add a subtitle 
+subtitle = Home Owners’ Loan Corporation (HOLC) neighborhood rating system from the 1930's. Grades were determined based on their perceived safety for real estate investment. The ranking system is as follows: A "Best", B "Still desirable", C "Declining", D "Hazardous". 
 
-- How to make bounding box larger 
 
 
 
