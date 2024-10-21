@@ -14,7 +14,7 @@ editor_options:
 code-fold: true
 ---
 
-Note to self: When I render this, there are messages that pop up when reading in the data, how do I fix this?
+Note to self: pick and choose which chunks get condensed
 
 ## Set up
 
@@ -29,6 +29,9 @@ library(sf)
 ```
 
 ```{r}
+#| output: false
+#| quiet: true
+
 # read in data 
 
 la_holc <- sf::st_read(here::here("data", "mapping-inequality", "mapping-inequality-los-angeles.json"))
@@ -120,14 +123,16 @@ tm_shape(la_holc) +
   tm_polygons("grade", # la map colored by grade 
               palette = c("#76a865", "#7cb5bd", "#ffff00", "#d9838d"),
               title = "HOLC Grade") +
-  tm_credits("Pacific Ocean", position = c(0.03, 0.3)) + # pacific ocean label 
+  tm_credits("Pacific Ocean", 
+             position = c(0.02, 0.3), size = 0.6) + # pacific ocean label 
    
-  tm_scale_bar(position = c(0.65, 0.9)) + # scale bar
-  tm_compass(position = c(0.6, 0.9), size = 1)+ # compass
+  tm_scale_bar(position = c(0.02, 0.02), width = 0.1) + # scale bar
+  tm_compass(position = c(0.01, 0.08), text.size = 0.5)+ # compass
   tm_layout(bg.color = "#D7F7FD", # blue background color 
             legend.outside = TRUE,
+            fontfamily = "serif",
             main.title = "Los Angeles County Historic Redlining Neighborhoods",
-            ) 
+            )
    
 
 ```
