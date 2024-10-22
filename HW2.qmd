@@ -11,26 +11,33 @@ format:
   html:
     toc: true
 editor_options: 
-code-fold: true
 ---
 
-Note to self: pick and choose which chunks get condensed
 
 ## Set up
 
+### Load Packages 
 ```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
 # load libraries 
 library(tidyverse)
 library(here)
 library(tmap)
 library(dplyr)
 library(sf)
+library(kableExtra)
 
 ```
 
+
+### Read in Data
 ```{r}
 #| output: false
 #| quiet: true
+#| code-fold: true
+#| code-summary: "Show the code"
 
 # read in data 
 
@@ -41,18 +48,26 @@ la_birds <- sf::st_read(here::here("data", "gbif-birds-LA", "gbif-birds-LA.shp")
 ejscreen <- sf::st_read(here::here("data","ejscreen","EJSCREEN_2023_BG_StatePct_with_AS_CNMI_GU_VI.gdb")) 
 ```
 
+
 ## Cleaning Data
 
+#### Filtering EJScreen Data
 ```{r}
-# filtering ejscreen to only include counties that make up the greater LA area 
+#| code-fold: true
+#| code-summary: "Show the code"
 
+# filtering ejscreen to only include counties that make up the greater LA area 
 la_ej <- ejscreen %>% 
   dplyr::filter(STATE_NAME == "California") %>% 
   dplyr::filter(CNTY_NAME %in% c("Los Angeles County", "San Bernardino County", "Orange County")) %>% 
   dplyr::filter((ID != '060379902000') & (ID != '060379903000')) # remove blocks in are in the ocean
 ```
 
+#### Removing NA value from HOLC Grade data 
 ```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
 # removing NA values in the 'grade' column of la_holc
 la_holc <- la_holc %>% 
   filter(!is.na(grade)) # remove the 1 NA value
@@ -87,7 +102,7 @@ The CRS of `la_holc` and `la_ej` are not the same. In order to use these two dat
 # ensures the CRS of the two datasets will match 
 la_holc = st_transform(la_holc, crs = st_crs(la_ej))
 
-# check to see if that worked 
+# check to see if CRS match
 if(st_crs(la_holc) == st_crs(la_ej)) {
   print("The coordinate reference systems now match")
 } else {
@@ -101,14 +116,12 @@ Now the CRS of each data set is matched.
 
 Your first task is to explore historical redlining in Los Angeles and its legacy on present-day environmental justice.
 
-#### Description
+### Map of historical Los Angeles redlining neighborhoods
 
-1.  a map of historical redlining neighborhoods, including:
-
--   neighborhoods colored by HOLC grade
--   an appropriate base map
 
 ```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
 
 # map of la county with the holc grades 
 tmap_mode('plot')
@@ -137,22 +150,77 @@ tm_shape(la_holc) +
 
 ```
 
-Need to figure out how to add a subtitle 
-subtitle = Home Owners’ Loan Corporation (HOLC) neighborhood rating system from the 1930's. Grades were determined based on their perceived safety for real estate investment. The ranking system is as follows: A "Best", B "Still desirable", C "Declining", D "Hazardous". 
+**Map Description** Home Owners’ Loan Corporation (HOLC) neighborhood rating system from the 1930's. Grades were determined based on their perceived safety for real estate investment. The ranking system is as follows: A "Best", B "Still desirable", C "Declining", D "Hazardous". 
 
 
 
+### Percent of current census block groups within each HOLC grade 
 
-2.  a table summarizing the percent of current census block groups within each HOLC grade (or none)
+In order to find the current census block groups within each HOLC grade, I need to use a topological operator to see which census groups ('ID') intersect with the HOLC neighborhood geometries. 
 
-st_intersect is most appropriate 
-kable to make table kableExtra
+There are many different ways to find this relationship, but I choose to use `st_intersection`. A caveat of this operator is that there is potential for double counting of census blocks if there are more than one HOLC neighbor within the block. 
+
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+# filter EJScreen to just Los Angeles county 
+la_county <- ejscreen %>% 
+  dplyr::filter(CNTY_NAME == "Los Angeles County")
+
+# join data sets to find overlapping geometries (interjoin will include NA values)
+holc_census <- st_join(x = la_county, y = la_holc, join = st_intersects, left = TRUE) %>%
+  group_by(grade) %>% 
+  summarise(count_blocks = n(), # count of blocks in each HOLC grade 
+            percentage = (n() / nrow(la_ej)) * 100) %>% # % of census blocks 
+  st_drop_geometry() # dropping geometry for the table 
+ 
+  
+# putting the info in a table
+kable(holc_census, 
+      col.names = c("HOLC grade",
+                        "Count of census blocks",
+                        "% of blocks within grade "),
+      caption = "Percentage of Census Block Groups per HOLC Grade") %>% 
+  kable_styling(bootstrap_options = "striped", full_width = FALSE, position = "center")
+
+```
+
+The NA value corresponds to the census block groups that do not intersect or touch any of the historic HOLC graded neighborhoods. 
+
 
 3.  a set of figures summarizing current conditions (from the EJScreen data) within HOLC grades using the mean of the following variables:
 
--   \% low income
--   percentile for Particulate Matter 2.5
--   percentile for low life expectancy
+
+
+
+### Percentage of low income households within the HOLC grades 
+
+End result: Bar graph that has grade on the x axis and percentage of low income houses on the y axis 
+
+How to do this: 
+- left join la_holc to la_county 
+- select 'LOWINCPCT' % of census block that is low income 
+
+```{r}
+
+```
+
+
+### Percentile of air quality (Particulate Matter 2.5) within HOLC grade neighborhoods
+
+```{r}
+
+```
+
+
+### Percentile of low-life expentancy within HOLC grade neighborhoods
+
+```{r}
+
+```
+
 
 4.  brief paragraph reflecting on these results
 
@@ -166,3 +234,7 @@ For this assignment, you must produce the following based on observations from 2
 
 1.  a figure summarizing the percent of observations within redlined neighborhoods within each HOLC grade
 2.  a brief paragraph explaining whether these results match the findings from Ellis-Soto et al. 2023
+
+
+NOTES FROM SLACK 
+part2 asks you to summarize the % of observations within each redlining grade. it's up to you whether or not you also include the % outside of the redlined districts
