@@ -28,6 +28,7 @@ library(tmap)
 library(dplyr)
 library(sf)
 library(kableExtra)
+library(patchwork)
 
 ```
 
@@ -112,11 +113,11 @@ if(st_crs(la_holc) == st_crs(la_ej)) {
 
 Now the CRS of each data set is matched. 
 
-## Part 1: Legacy of redlining in current environmental (in)justice
+# Part 1: Legacy of redlining in current environmental (in)justice
 
-Your first task is to explore historical redlining in Los Angeles and its legacy on present-day environmental justice.
+Exploring historical redlining in Los Angeles and its legacy on present-day environmental justice.
 
-#### Map of historical Los Angeles redlining neighborhoods
+### Map of historical Los Angeles redlining neighborhoods
 
 
 ```{r}
@@ -154,7 +155,7 @@ tm_shape(la_holc) +
 
 
 
-#### Percent of current census block groups within each HOLC grade 
+### Percent of current census block groups within each HOLC grade 
 
 In order to find the current census block groups within each HOLC grade, I need to use a topological operator to see which census groups ('ID') intersect with the HOLC neighborhood geometries. 
 
@@ -173,7 +174,7 @@ la_county <- ejscreen %>%
 holc_census <- st_join(x = la_county, y = la_holc, join = st_intersects, left = TRUE) %>%
   group_by(grade) %>% 
   summarise(count_blocks = n(), # count of blocks in each HOLC grade 
-            percentage = (n() / nrow(la_ej)) * 100) %>% # % of census blocks 
+            percentage = (n() / nrow(la_county)) * 100) %>% # % of census blocks 
   st_drop_geometry() # dropping geometry for the table 
  
   
@@ -190,41 +191,74 @@ kable(holc_census,
 The NA value corresponds to the census block groups that do not intersect or touch any of the historic HOLC graded neighborhoods. 
 
 
-3.  a set of figures summarizing current conditions (from the EJScreen data) within HOLC grades using the mean of the following variables:
+## Current Conditions within the HOLC Grades
 
-
-#### Percentage of low income households within the HOLC grades 
-
+#### Spatial Join of HOLC data and EJ Screen Data
 ```{r}
 #| code-fold: true
 #| code-summary: "Show the code"
 
-# filter la_county to only include 'Shape', 'ID' and 'LOWINCPCT'
-la_lowincome <- la_county %>% 
-  select('Shape', 'ID', 'LOWINCPCT')
-
-# spatial join low income and HOLC grade 
-holc_lowincome <- st_join(x = la_holc, y = la_lowincome, join = st_intersects, left = TRUE) %>% 
+# join holc and ej data, summarise low income, air quality, and low life expectancy 
+holc_ej_join <- st_join(x = la_holc, y = la_county, join = st_intersects, left = TRUE) %>% 
   group_by(grade) %>%
-  summarise(
-    avg_pct_lowincome = (mean(LOWINCPCT, na.rm = TRUE) * 100),  # mean percent of low-income households
-    count_blocks = n() ) %>%  # number of census blocks per HOLC grade
+  summarise(count_blocks = n(),
+            avg_pct_lowincome = mean(LOWINCPCT)*100,
+            avg_pct_pm = mean(P_D2_PM25),
+            avg_pct_lowlife = mean(P_LIFEEXPPCT, na.rm = TRUE)) %>% 
   st_drop_geometry()
+```
+
+#### Plot of the mean percent low-income neighborhoods. 
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
 
 # bar graph to display results 
-ggplot(data = holc_lowincome, aes(x = grade, y = avg_pct_lowincome, fill = grade)) +
+ggplot(data = holc_ej_join, aes(x = grade, y = avg_pct_lowincome, fill = grade)) +
   geom_col() +
   scale_fill_manual(values = c("A" = "#76a865", "B" = "#7cb5bd", "C" = "#ffff00", "D" = "#d9838d")) +# bar colors
   labs(x = 'HOLC Grade',
        y = 'Average % of low income households',
-       title = 'Percentage of low income households within Los Angeles HOLC neighborhoods (2021)') + 
+       title = 'Mean Percentage of low income households within Los Angeles HOLC neighborhoods (2021)') + 
   theme_classic() +
   theme(legend.position = "none")
 ```
 
-It is also important to recognize that the Environmental Justice Screen was collected using 2021 census data.  
 
 #### Percentile of air quality (Particulate Matter 2.5) within HOLC grade neighborhoods
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+# bar graph to display results 
+ggplot(data = holc_ej_join, aes(x = grade, y = avg_pct_pm, fill = grade)) +
+  geom_col() +
+  scale_fill_manual(values = c("A" = "#76a865", "B" = "#7cb5bd", "C" = "#ffff00", "D" = "#d9838d")) +# bar colors
+  labs(x = 'HOLC Grade',
+       y = 'Percentile for Particulate Matter 2.5',
+       title = 'Mean Percentile for Particulate Matter 2.5 \n within Los Angeles HOLC neighborhoods(2021)') + 
+  theme_classic() +
+  theme(legend.position = "none")
+```
+
+#### Percentile of low-life expentancy within HOLC grade neighborhoods
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+# bar graph to display results 
+ggplot(data = holc_ej_join, aes(x = grade, y = avg_pct_lowlife, fill = grade)) +
+  geom_col() +
+  scale_fill_manual(values = c("A" = "#76a865", "B" = "#7cb5bd", "C" = "#ffff00", "D" = "#d9838d")) +# bar colors
+  labs(x = 'HOLC Grade',
+       y = 'Percentile for Low Life Expectancy',
+       title = 'Mean Percentile for Low Life Expectancy \n within Los Angeles HOLC neighborhoods(2021)') + 
+  theme_classic() +
+  theme(legend.position = "none")
+```
+It is also important to recognize that the Environmental Justice Screen was collected using 2021 census data.  
+
+#### Density plots for Percentile PM 2.5 and low life expencty within HOLC grade neighborhoods
 
 ```{r}
 #| code-fold: true
@@ -238,7 +272,7 @@ la_air_quality <- la_county %>%
 holc_pm <- st_join(x = la_holc, y = la_air_quality, join = st_intersects, left = TRUE) 
 
 # violin plot to show densities 
-ggplot(holc_pm, aes(x = grade, y = P_D2_PM25, fill = grade)) +
+fig1<- ggplot(holc_pm, aes(x = grade, y = P_D2_PM25, fill = grade)) +
   geom_violin() +
   scale_fill_manual(values = c("A" = "#76a865", "B" = "#7cb5bd", "C" = "#ffff00", "D" = "#d9838d")) + # bar colors
   geom_boxplot(width=0.1) + # box plot to show interquartile range 
@@ -250,15 +284,7 @@ ggplot(holc_pm, aes(x = grade, y = P_D2_PM25, fill = grade)) +
         panel.grid.major.y = element_line(color = "darkgrey",
                                           size = 0.25,
                                           linetype = 1))
-```
 
-From EJ Screen Documentation: 
-
-The PM 2.5 indicator is a measure of potential exposure to inhalable particles that are 2.5 micrometers or smaller. This is measured in terms of annual average concentration in air measured in micrograms per cubic meter. PM 2.5 information included in EJScreen highlights areas across the U.S. that have the highest PM 2.5 levels when compared to the nation or state. It does not indicate
-
-#### Percentile of low-life expentancy within HOLC grade neighborhoods
-
-```{r}
 # filter la_county to only include 'Shape', 'ID' and 'P_LIFEEXPPCT'
 la_low_life <- la_county %>% 
   select('Shape', 'ID', 'P_LIFEEXPPCT')
@@ -267,7 +293,7 @@ la_low_life <- la_county %>%
 holc_low_life <- st_join(x = la_holc, y = la_low_life, join = st_intersects, left = TRUE) 
 
 # violin plot to show denisties
-ggplot(holc_low_life, aes(x = grade, y = P_LIFEEXPPCT, fill = grade)) +
+fig2<- ggplot(holc_low_life, aes(x = grade, y = P_LIFEEXPPCT, fill = grade)) +
   geom_violin() +
   scale_fill_manual(values = c("A" = "#76a865", "B" = "#7cb5bd", "C" = "#ffff00", "D" = "#d9838d")) + # bar colors
   geom_boxplot(width=0.1) + # box plot to show interquartile range 
@@ -279,7 +305,13 @@ ggplot(holc_low_life, aes(x = grade, y = P_LIFEEXPPCT, fill = grade)) +
         panel.grid.major.y = element_line(color = "darkgrey",
                                           size = 0.25,
                                           linetype = 1))
+
+(fig1 | fig2)
 ```
+
+From EJ Screen Documentation: 
+
+The PM 2.5 indicator is a measure of potential exposure to inhalable particles that are 2.5 micrometers or smaller. This is measured in terms of annual average concentration in air measured in micrograms per cubic meter. PM 2.5 information included in EJScreen highlights areas across the U.S. that have the highest PM 2.5 levels when compared to the nation or state. It does not indicate
 
 From EJ Screen Documentation: 
 
