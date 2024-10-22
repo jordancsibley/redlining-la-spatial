@@ -227,20 +227,67 @@ It is also important to recognize that the Environmental Justice Screen was coll
 #### Percentile of air quality (Particulate Matter 2.5) within HOLC grade neighborhoods
 
 ```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
 # filter la_county to only include 'Shape', 'ID' and 'P_D2_PM25'
 la_air_quality <- la_county %>% 
   select('Shape', 'ID', 'P_D2_PM25')
+
+# join PM data with HOLC data 
+holc_pm <- st_join(x = la_holc, y = la_air_quality, join = st_intersects, left = TRUE) 
+
+# violin plot to show densities 
+ggplot(holc_pm, aes(x = grade, y = P_D2_PM25, fill = grade)) +
+  geom_violin() +
+  scale_fill_manual(values = c("A" = "#76a865", "B" = "#7cb5bd", "C" = "#ffff00", "D" = "#d9838d")) + # bar colors
+  geom_boxplot(width=0.1) + # box plot to show interquartile range 
+  labs(x = "HOLC Grade",
+       y = "Percentile for Particulate Matter 2.5",
+       title = "Air Quality within Los Angeles HOLC neighborhoods (2021) ") +
+  theme_classic() +
+  theme(legend.position = "none",
+        panel.grid.major.y = element_line(color = "darkgrey",
+                                          size = 0.25,
+                                          linetype = 1))
 ```
 
+From EJ Screen Documentation: 
+
+The PM 2.5 indicator is a measure of potential exposure to inhalable particles that are 2.5 micrometers or smaller. This is measured in terms of annual average concentration in air measured in micrograms per cubic meter. PM 2.5 information included in EJScreen highlights areas across the U.S. that have the highest PM 2.5 levels when compared to the nation or state. It does not indicate
 
 #### Percentile of low-life expentancy within HOLC grade neighborhoods
 
 ```{r}
+# filter la_county to only include 'Shape', 'ID' and 'P_LIFEEXPPCT'
+la_low_life <- la_county %>% 
+  select('Shape', 'ID', 'P_LIFEEXPPCT')
 
+# join PM data with HOLC data 
+holc_low_life <- st_join(x = la_holc, y = la_low_life, join = st_intersects, left = TRUE) 
+
+# violin plot to show denisties
+ggplot(holc_low_life, aes(x = grade, y = P_LIFEEXPPCT, fill = grade)) +
+  geom_violin() +
+  scale_fill_manual(values = c("A" = "#76a865", "B" = "#7cb5bd", "C" = "#ffff00", "D" = "#d9838d")) + # bar colors
+  geom_boxplot(width=0.1) + # box plot to show interquartile range 
+  labs(x = "HOLC Grade",
+       y = "Percentile for Low Life Expectancy",
+       title = "Low Life Expentancy Percentiles within Los Angeles HOLC neighborhoods (2021) ") +
+  theme_classic() +
+  theme(legend.position = "none",
+        panel.grid.major.y = element_line(color = "darkgrey",
+                                          size = 0.25,
+                                          linetype = 1))
 ```
 
+From EJ Screen Documentation: 
+
+Low Life Expectancy—To highlight areas where the life expectancy is lower than National norms, EJScreen uses an inverse measure showing higher values for lower years and lower scores for higher years. Low Life Expectancy is an inverse of the normalized life expectancy (as defined below) derived from the Life Expectancy at Birth from Centers for Disease Control and Prevention (CDC), National Center for Health Statistics (NCHS): % Low Life Expectancy is defined as “1 – (Life Expectancy / Max Life Expectancy)”
 
 4.  brief paragraph reflecting on these results
+
+TEXT HERE 
 
 ## Part 2: Legacy of redlining in biodiversity observations
 
@@ -267,3 +314,49 @@ pct_bird_obs_area <- joined_birds %>%
   mutate(bird_count_area = grade_count/total_area) %>%
   select(grade, bird_count_area) %>% 
   st_drop_geometry() 
+  
+  
+  
+First, we need to see if the bird observations and the HOLC grade neighborhood data is operating under the same coordinate reference system. 
+
+```{r}
+# check if data has same crs 
+if(st_crs(la_holc) == st_crs(la_birds)) {
+  print("The coordinate reference systems match")
+} else {
+  print("The coordinate reference systems do NOT match. Transformation of CRS is recommended.")
+}
+```
+
+Now the CRS of `la_birds` can be transformed to match `la_holc`
+```{r}
+# ensures the CRS of the two datasets will match 
+la_birds = st_transform(la_birds, crs = st_crs(la_holc))
+
+# check to see if CRS match
+if(st_crs(la_holc) == st_crs(la_birds)) {
+  print("The coordinate reference systems now match")
+} else {
+  warning("The coordinate reference systems still do NOT match. Check that you did the transformation correctly")
+}
+```
+
+  
+Need to join bird observations to HOLC grade data 
+Then, figure out how many observations are per HOLC grade per area to account for the amount of land each holc grade occupies. 
+
+NEED TO FIGURE OUT THE UNITS OF AREA 
+
+maybe could produce two bar graphs, one with total area per holc grade, and then another of number of observations per holc grade area. 
+
+
+```{r}
+holc_la_birds <-st_join(x = la_holc, y = la_birds, join = st_intersects, left = FALSE) %>% 
+  filter(year == 2022) %>%
+  group_by(grade) %>% 
+  summarise(grade_area_total = sum(area, na.rm = TRUE),
+            obs_count = n()) %>%
+  mutate(obs_per_area = obs_count/grade_area_total) %>%
+  st_drop_geometry() 
+```
+
