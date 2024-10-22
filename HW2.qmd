@@ -116,7 +116,7 @@ Now the CRS of each data set is matched.
 
 Your first task is to explore historical redlining in Los Angeles and its legacy on present-day environmental justice.
 
-### Map of historical Los Angeles redlining neighborhoods
+#### Map of historical Los Angeles redlining neighborhoods
 
 
 ```{r}
@@ -154,7 +154,7 @@ tm_shape(la_holc) +
 
 
 
-### Percent of current census block groups within each HOLC grade 
+#### Percent of current census block groups within each HOLC grade 
 
 In order to find the current census block groups within each HOLC grade, I need to use a topological operator to see which census groups ('ID') intersect with the HOLC neighborhood geometries. 
 
@@ -193,29 +193,47 @@ The NA value corresponds to the census block groups that do not intersect or tou
 3.  a set of figures summarizing current conditions (from the EJScreen data) within HOLC grades using the mean of the following variables:
 
 
-
-
-### Percentage of low income households within the HOLC grades 
-
-End result: Bar graph that has grade on the x axis and percentage of low income houses on the y axis 
-
-How to do this: 
-- left join la_holc to la_county 
-- select 'LOWINCPCT' % of census block that is low income 
+#### Percentage of low income households within the HOLC grades 
 
 ```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
 
+# filter la_county to only include 'Shape', 'ID' and 'LOWINCPCT'
+la_lowincome <- la_county %>% 
+  select('Shape', 'ID', 'LOWINCPCT')
+
+# spatial join low income and HOLC grade 
+holc_lowincome <- st_join(x = la_holc, y = la_lowincome, join = st_intersects, left = TRUE) %>% 
+  group_by(grade) %>%
+  summarise(
+    avg_pct_lowincome = (mean(LOWINCPCT, na.rm = TRUE) * 100),  # mean percent of low-income households
+    count_blocks = n() ) %>%  # number of census blocks per HOLC grade
+  st_drop_geometry()
+
+# bar graph to display results 
+ggplot(data = holc_lowincome, aes(x = grade, y = avg_pct_lowincome, fill = grade)) +
+  geom_col() +
+  scale_fill_manual(values = c("A" = "#76a865", "B" = "#7cb5bd", "C" = "#ffff00", "D" = "#d9838d")) +# bar colors
+  labs(x = 'HOLC Grade',
+       y = 'Average % of low income households',
+       title = 'Percentage of low income households within Los Angeles HOLC neighborhoods (2021)') + 
+  theme_classic() +
+  theme(legend.position = "none")
+```
+
+It is also important to recognize that the Environmental Justice Screen was collected using 2021 census data.  
+
+#### Percentile of air quality (Particulate Matter 2.5) within HOLC grade neighborhoods
+
+```{r}
+# filter la_county to only include 'Shape', 'ID' and 'P_D2_PM25'
+la_air_quality <- la_county %>% 
+  select('Shape', 'ID', 'P_D2_PM25')
 ```
 
 
-### Percentile of air quality (Particulate Matter 2.5) within HOLC grade neighborhoods
-
-```{r}
-
-```
-
-
-### Percentile of low-life expentancy within HOLC grade neighborhoods
+#### Percentile of low-life expentancy within HOLC grade neighborhoods
 
 ```{r}
 
@@ -238,3 +256,14 @@ For this assignment, you must produce the following based on observations from 2
 
 NOTES FROM SLACK 
 part2 asks you to summarize the % of observations within each redlining grade. it's up to you whether or not you also include the % outside of the redlined districts
+
+NOTES FROM JOSH 
+pct_bird_obs_area <- joined_birds %>%
+  filter(year == 2022, (grade != "NA")) %>%
+  group_by(grade) %>% 
+  summarise(
+    total_area = sum(area, na.rm = TRUE),
+    grade_count = n()) %>%
+  mutate(bird_count_area = grade_count/total_area) %>%
+  select(grade, bird_count_area) %>% 
+  st_drop_geometry() 
