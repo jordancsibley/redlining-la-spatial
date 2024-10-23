@@ -219,11 +219,10 @@ ggplot(data = holc_ej_join, aes(x = grade, y = avg_pct_lowincome, fill = grade))
   scale_fill_manual(values = c("A" = "#76a865", "B" = "#7cb5bd", "C" = "#ffff00", "D" = "#d9838d")) +# bar colors
   labs(x = 'HOLC Grade',
        y = 'Average % of low income households',
-       title = 'Mean Percentage of low income households within Los Angeles HOLC neighborhoods (2021)') + 
+       title = 'Mean Percentage of low income households \n within Los Angeles HOLC neighborhoods (2021)') + 
   theme_classic() +
   theme(legend.position = "none")
 ```
-
 
 #### Percentile of air quality (Particulate Matter 2.5) within HOLC grade neighborhoods
 ```{r}
@@ -235,8 +234,8 @@ ggplot(data = holc_ej_join, aes(x = grade, y = avg_pct_pm, fill = grade)) +
   geom_col() +
   scale_fill_manual(values = c("A" = "#76a865", "B" = "#7cb5bd", "C" = "#ffff00", "D" = "#d9838d")) +# bar colors
   labs(x = 'HOLC Grade',
-       y = 'Percentile for Particulate Matter 2.5',
-       title = 'Mean Percentile for Particulate Matter 2.5 \n within Los Angeles HOLC neighborhoods(2021)') + 
+       y = 'Average Percentile for Particulate Matter 2.5',
+       title = 'Mean Percentile for Particulate Matter 2.5 \n within Los Angeles HOLC neighborhoods (2021)') + 
   theme_classic() +
   theme(legend.position = "none")
 ```
@@ -251,15 +250,19 @@ ggplot(data = holc_ej_join, aes(x = grade, y = avg_pct_lowlife, fill = grade)) +
   geom_col() +
   scale_fill_manual(values = c("A" = "#76a865", "B" = "#7cb5bd", "C" = "#ffff00", "D" = "#d9838d")) +# bar colors
   labs(x = 'HOLC Grade',
-       y = 'Percentile for Low Life Expectancy',
+       y = 'Average Percentile for Low Life Expectancy',
        title = 'Mean Percentile for Low Life Expectancy \n within Los Angeles HOLC neighborhoods(2021)') + 
   theme_classic() +
   theme(legend.position = "none")
 ```
 It is also important to recognize that the Environmental Justice Screen was collected using 2021 census data.  
 
+
+In addition to viewing the average values of the EJ Screen parameters, I beleive it is important to also examine the spread of densities 
+
 #### Density plots for Percentile PM 2.5 and low life expencty within HOLC grade neighborhoods
 
+In addition to viewing the average values of the EJ Screen parameters, I believe it is important to also examine the spread of densities. 
 ```{r}
 #| code-fold: true
 #| code-summary: "Show the code"
@@ -278,7 +281,7 @@ fig1<- ggplot(holc_pm, aes(x = grade, y = P_D2_PM25, fill = grade)) +
   geom_boxplot(width=0.1) + # box plot to show interquartile range 
   labs(x = "HOLC Grade",
        y = "Percentile for Particulate Matter 2.5",
-       title = "Air Quality within Los Angeles HOLC neighborhoods (2021) ") +
+       title = "Air Quality within \nLos Angeles HOLC neighborhoods (2021)") +
   theme_classic() +
   theme(legend.position = "none",
         panel.grid.major.y = element_line(color = "darkgrey",
@@ -299,7 +302,7 @@ fig2<- ggplot(holc_low_life, aes(x = grade, y = P_LIFEEXPPCT, fill = grade)) +
   geom_boxplot(width=0.1) + # box plot to show interquartile range 
   labs(x = "HOLC Grade",
        y = "Percentile for Low Life Expectancy",
-       title = "Low Life Expentancy Percentiles within Los Angeles HOLC neighborhoods (2021) ") +
+       title = "Low Life Expentancy Percentiles \nwithin Los Angeles HOLC neighborhoods (2021) ") +
   theme_classic() +
   theme(legend.position = "none",
         panel.grid.major.y = element_line(color = "darkgrey",
@@ -321,7 +324,7 @@ Low Life Expectancy—To highlight areas where the life expectancy is lower than
 
 TEXT HERE 
 
-## Part 2: Legacy of redlining in biodiversity observations
+# Part 2: Legacy of redlining in biodiversity observations
 
 Your second task is to explore the legacy of historical redlining in Los Angeles on the collection of bird observations.
 
@@ -332,21 +335,6 @@ For this assignment, you must produce the following based on observations from 2
 1.  a figure summarizing the percent of observations within redlined neighborhoods within each HOLC grade
 2.  a brief paragraph explaining whether these results match the findings from Ellis-Soto et al. 2023
 
-
-NOTES FROM SLACK 
-part2 asks you to summarize the % of observations within each redlining grade. it's up to you whether or not you also include the % outside of the redlined districts
-
-NOTES FROM JOSH 
-pct_bird_obs_area <- joined_birds %>%
-  filter(year == 2022, (grade != "NA")) %>%
-  group_by(grade) %>% 
-  summarise(
-    total_area = sum(area, na.rm = TRUE),
-    grade_count = n()) %>%
-  mutate(bird_count_area = grade_count/total_area) %>%
-  select(grade, bird_count_area) %>% 
-  st_drop_geometry() 
-  
   
   
 First, we need to see if the bird observations and the HOLC grade neighborhood data is operating under the same coordinate reference system. 
@@ -381,7 +369,7 @@ NEED TO FIGURE OUT THE UNITS OF AREA
 
 maybe could produce two bar graphs, one with total area per holc grade, and then another of number of observations per holc grade area. 
 
-
+a figure summarizing the **percent** of observations within redlined neighborhoods within each HOLC grade
 ```{r}
 holc_la_birds <-st_join(x = la_holc, y = la_birds, join = st_intersects, left = FALSE) %>% 
   filter(year == 2022) %>%
@@ -391,4 +379,5 @@ holc_la_birds <-st_join(x = la_holc, y = la_birds, join = st_intersects, left = 
   mutate(obs_per_area = obs_count/grade_area_total) %>%
   st_drop_geometry() 
 ```
+
 
