@@ -370,14 +370,64 @@ NEED TO FIGURE OUT THE UNITS OF AREA
 maybe could produce two bar graphs, one with total area per holc grade, and then another of number of observations per holc grade area. 
 
 a figure summarizing the **percent** of observations within redlined neighborhoods within each HOLC grade
+
+In order to figure out how many bird observations were recorded in each HOLC grade in 2022, the observation data and HOLC grade neighborhood spatial data needs to be joined. Then, the percentage of bird observations is found by taking the number of bird observations per grade divided by the total number of bird observations across all four grades. I have decided not to include the observations that do not fall within the bounds of the HOLC grade neighborhoods. 
+
+#### Join data and visualization 
 ```{r}
-holc_la_birds <-st_join(x = la_holc, y = la_birds, join = st_intersects, left = FALSE) %>% 
-  filter(year == 2022) %>%
+#| code-fold: true
+#| code-summary: "Show the code"
+
+# join spatial data to observation data 
+holc_bird_pct <- st_join(x = la_holc, y = la_birds, join = st_intersects, left = FALSE) %>% 
+  filter(year == 2022) %>% 
   group_by(grade) %>% 
-  summarise(grade_area_total = sum(area, na.rm = TRUE),
-            obs_count = n()) %>%
-  mutate(obs_per_area = obs_count/grade_area_total) %>%
-  st_drop_geometry() 
+  summarise(obs_count = n())  %>% # total observations per grade 
+  mutate(obs_pct = (obs_count / sum(obs_count)) * 100) %>% # percent of observations per grade 
+  st_drop_geometry()
+
+# put the percentage info in a bar graph 
+ggplot(data = holc_bird_pct, aes(x = grade, y = obs_pct, fill = grade)) +
+  geom_col() +
+  scale_fill_manual(values = c("A" = "#76a865", "B" = "#7cb5bd", "C" = "#ffff00", "D" = "#d9838d")) +# bar colors
+  labs(x = 'HOLC Grade',
+       y = '% of Bird Observations',
+       title = 'Percent of Bird Observations Per HOLC Grade (2022)') + 
+  theme_classic() +
+  theme(legend.position = "none")
 ```
 
+Looking at the graph, it seems that there are more bird observations with the C and D grades, which does not match the match the findings from Ellis-Soto et al. 2023. However, this graph above does not account for the area that each grade occupies. Let's see if we can rework these observations scaled by area. 
+
+#### Bird observations per grade per area
+```{r}
+# join data and find obs per area of grade 
+holc_birds_area <-st_join(x = la_holc, y = la_birds, join = st_intersects, left = FALSE) %>% 
+  filter(year == 2022) %>%
+  group_by(grade) %>% 
+  summarise(grade_area_total = sum(area, na.rm = TRUE), # find total area of each grade 
+            obs_count = n()) %>%
+  mutate(obs_per_area = obs_count/grade_area_total) %>% # observations per area 
+  st_drop_geometry() 
+
+# put the count/area info in a bar graph 
+ggplot(data = holc_birds_area, aes(x = grade, y = obs_per_area, fill = grade)) +
+  geom_col() +
+  scale_fill_manual(values = c("A" = "#76a865", "B" = "#7cb5bd", "C" = "#ffff00", "D" = "#d9838d")) +# bar colors
+  labs(x = 'HOLC Grade',
+       y = 'Count of Bird Observation per area ',
+       title = 'Count of Bird Observations Per HOLC Grade Area (2022)') + 
+  theme_classic() +
+  theme(legend.position = "none")
+```
+
+
+
+
+Potential test that to use 
+```{r}
+test_that("All % values are above zero", {
+  expect_true(all(census_grades$percentage > 0))
+})
+```
 
