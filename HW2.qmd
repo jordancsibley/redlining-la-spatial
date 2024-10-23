@@ -29,6 +29,7 @@ library(dplyr)
 library(sf)
 library(kableExtra)
 library(patchwork)
+library(testthat)
 
 ```
 
@@ -49,6 +50,10 @@ la_birds <- sf::st_read(here::here("data", "gbif-birds-LA", "gbif-birds-LA.shp")
 ejscreen <- sf::st_read(here::here("data","ejscreen","EJSCREEN_2023_BG_StatePct_with_AS_CNMI_GU_VI.gdb")) 
 ```
 
+
+# Part 1: Legacy of redlining in current environmental (in)justice
+
+Exploring historical redlining in Los Angeles and its legacy on present-day environmental justice.
 
 ## Cleaning Data
 
@@ -113,12 +118,8 @@ if(st_crs(la_holc) == st_crs(la_ej)) {
 
 Now the CRS of each data set is matched. 
 
-# Part 1: Legacy of redlining in current environmental (in)justice
 
-Exploring historical redlining in Los Angeles and its legacy on present-day environmental justice.
-
-### Map of historical Los Angeles redlining neighborhoods
-
+## Map of historical Los Angeles redlining neighborhoods
 
 ```{r}
 #| code-fold: true
@@ -147,20 +148,17 @@ tm_shape(la_holc) +
             fontfamily = "serif",
             main.title = "Los Angeles County Historic Redlining Neighborhoods",
             )
-   
-
 ```
 
 **Map Description** Home Owners’ Loan Corporation (HOLC) neighborhood rating system from the 1930's. Grades were determined based on their perceived safety for real estate investment. The ranking system is as follows: A "Best", B "Still desirable", C "Declining", D "Hazardous". 
 
 
 
-### Percent of current census block groups within each HOLC grade 
+## Percent of current census block groups within each HOLC grade 
 
 In order to find the current census block groups within each HOLC grade, I need to use a topological operator to see which census groups ('ID') intersect with the HOLC neighborhood geometries. 
 
-There are many different ways to find this relationship, but I choose to use `st_intersection`. A caveat of this operator is that there is potential for double counting of census blocks if there are more than one HOLC neighbor within the block. 
-
+There are many different ways to find this relationship, but I chose to use `st_intersection`. A caveat of this operator is that there is potential for double counting of census blocks if there are more than one HOLC neighbor within the block. 
 
 ```{r}
 #| code-fold: true
@@ -193,7 +191,9 @@ The NA value corresponds to the census block groups that do not intersect or tou
 
 ## Current Conditions within the HOLC Grades
 
-#### Spatial Join of HOLC data and EJ Screen Data
+By combining the historic HOLC neighborhood data with current Environmental Justice data we can examine how the HOLC grade neighborhoods fair today with certain environmental and socioeconomic markers. 
+
+### Spatial Join of HOLC data and EJ Screen Data
 ```{r}
 #| code-fold: true
 #| code-summary: "Show the code"
@@ -208,7 +208,7 @@ holc_ej_join <- st_join(x = la_holc, y = la_county, join = st_intersects, left =
   st_drop_geometry()
 ```
 
-#### Plot of the mean percent low-income neighborhoods. 
+### Plot of the mean percent low-income neighborhoods. 
 ```{r}
 #| code-fold: true
 #| code-summary: "Show the code"
@@ -224,7 +224,7 @@ ggplot(data = holc_ej_join, aes(x = grade, y = avg_pct_lowincome, fill = grade))
   theme(legend.position = "none")
 ```
 
-#### Percentile of air quality (Particulate Matter 2.5) within HOLC grade neighborhoods
+### Plot of air quality (Particulate Matter 2.5) within HOLC grade neighborhoods
 ```{r}
 #| code-fold: true
 #| code-summary: "Show the code"
@@ -240,7 +240,7 @@ ggplot(data = holc_ej_join, aes(x = grade, y = avg_pct_pm, fill = grade)) +
   theme(legend.position = "none")
 ```
 
-#### Percentile of low-life expentancy within HOLC grade neighborhoods
+### Plot of low-life expentancy within HOLC grade neighborhoods
 ```{r}
 #| code-fold: true
 #| code-summary: "Show the code"
@@ -258,9 +258,8 @@ ggplot(data = holc_ej_join, aes(x = grade, y = avg_pct_lowlife, fill = grade)) +
 It is also important to recognize that the Environmental Justice Screen was collected using 2021 census data.  
 
 
-In addition to viewing the average values of the EJ Screen parameters, I beleive it is important to also examine the spread of densities 
 
-#### Density plots for Percentile PM 2.5 and low life expencty within HOLC grade neighborhoods
+### Density plots for Percentile PM 2.5 and low life expencty within HOLC grade neighborhoods
 
 In addition to viewing the average values of the EJ Screen parameters, I believe it is important to also examine the spread of densities. 
 ```{r}
@@ -281,7 +280,7 @@ fig1<- ggplot(holc_pm, aes(x = grade, y = P_D2_PM25, fill = grade)) +
   geom_boxplot(width=0.1) + # box plot to show interquartile range 
   labs(x = "HOLC Grade",
        y = "Percentile for Particulate Matter 2.5",
-       title = "Air Quality within \nLos Angeles HOLC neighborhoods (2021)") +
+       title = "Air Quality within \nL.A HOLC neighborhoods (2021)") +
   theme_classic() +
   theme(legend.position = "none",
         panel.grid.major.y = element_line(color = "darkgrey",
@@ -302,7 +301,7 @@ fig2<- ggplot(holc_low_life, aes(x = grade, y = P_LIFEEXPPCT, fill = grade)) +
   geom_boxplot(width=0.1) + # box plot to show interquartile range 
   labs(x = "HOLC Grade",
        y = "Percentile for Low Life Expectancy",
-       title = "Low Life Expentancy Percentiles \nwithin Los Angeles HOLC neighborhoods (2021) ") +
+       title = "Low Life Expentancy Percentiles \nwithin L.A HOLC neighborhoods (2021) ") +
   theme_classic() +
   theme(legend.position = "none",
         panel.grid.major.y = element_line(color = "darkgrey",
@@ -312,30 +311,16 @@ fig2<- ggplot(holc_low_life, aes(x = grade, y = P_LIFEEXPPCT, fill = grade)) +
 (fig1 | fig2)
 ```
 
-From EJ Screen Documentation: 
 
-The PM 2.5 indicator is a measure of potential exposure to inhalable particles that are 2.5 micrometers or smaller. This is measured in terms of annual average concentration in air measured in micrograms per cubic meter. PM 2.5 information included in EJScreen highlights areas across the U.S. that have the highest PM 2.5 levels when compared to the nation or state. It does not indicate
+Based on the figures above, it appears across the different parameters (low-income households, particulate matter percentiles, and low life expectancy) the effect was greater as the grade decreased. This reveals that the historic neighborhood grading has resulted in current environmental discrimination. 
 
-From EJ Screen Documentation: 
-
-Low Life Expectancy—To highlight areas where the life expectancy is lower than National norms, EJScreen uses an inverse measure showing higher values for lower years and lower scores for higher years. Low Life Expectancy is an inverse of the normalized life expectancy (as defined below) derived from the Life Expectancy at Birth from Centers for Disease Control and Prevention (CDC), National Center for Health Statistics (NCHS): % Low Life Expectancy is defined as “1 – (Life Expectancy / Max Life Expectancy)”
-
-4.  brief paragraph reflecting on these results
-
-TEXT HERE 
 
 # Part 2: Legacy of redlining in biodiversity observations
 
-Your second task is to explore the legacy of historical redlining in Los Angeles on the collection of bird observations.
+Exploring the legacy of historical redlining in Los Angeles on the collection of bird observations.
 
-#### Description
 
-For this assignment, you must produce the following based on observations from 2022:
-
-1.  a figure summarizing the percent of observations within redlined neighborhoods within each HOLC grade
-2.  a brief paragraph explaining whether these results match the findings from Ellis-Soto et al. 2023
-
-  
+#### Determining the Coordinate Reference Systems
   
 First, we need to see if the bird observations and the HOLC grade neighborhood data is operating under the same coordinate reference system. 
 
@@ -362,18 +347,14 @@ if(st_crs(la_holc) == st_crs(la_birds)) {
 ```
 
   
-Need to join bird observations to HOLC grade data 
-Then, figure out how many observations are per HOLC grade per area to account for the amount of land each holc grade occupies. 
 
 NEED TO FIGURE OUT THE UNITS OF AREA 
 
-maybe could produce two bar graphs, one with total area per holc grade, and then another of number of observations per holc grade area. 
-
-a figure summarizing the **percent** of observations within redlined neighborhoods within each HOLC grade
+## Examining bird observations within the HOLC grades
 
 In order to figure out how many bird observations were recorded in each HOLC grade in 2022, the observation data and HOLC grade neighborhood spatial data needs to be joined. Then, the percentage of bird observations is found by taking the number of bird observations per grade divided by the total number of bird observations across all four grades. I have decided not to include the observations that do not fall within the bounds of the HOLC grade neighborhoods. 
 
-#### Join data and visualization 
+#### Join data
 ```{r}
 #| code-fold: true
 #| code-summary: "Show the code"
@@ -385,6 +366,24 @@ holc_bird_pct <- st_join(x = la_holc, y = la_birds, join = st_intersects, left =
   summarise(obs_count = n())  %>% # total observations per grade 
   mutate(obs_pct = (obs_count / sum(obs_count)) * 100) %>% # percent of observations per grade 
   st_drop_geometry()
+```
+
+#### Test joined data 
+
+It is important when performing joins that your new dataset has all the information that is important to you. In this test, I am going to double check that the percentages are all above 0% and below 100%.
+
+```{r}
+# Test that percentages are positive and below 100% 
+test_that("All % values are above zero", {
+  expect_true(all((holc_bird_pct$obs_pct > 0) & holc_bird_pct$obs_pct <= 100 ))
+})
+```
+
+
+### Visualization of bird observations
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
 
 # put the percentage info in a bar graph 
 ggplot(data = holc_bird_pct, aes(x = grade, y = obs_pct, fill = grade)) +
@@ -399,8 +398,11 @@ ggplot(data = holc_bird_pct, aes(x = grade, y = obs_pct, fill = grade)) +
 
 Looking at the graph, it seems that there are more bird observations with the C and D grades, which does not match the match the findings from Ellis-Soto et al. 2023. However, this graph above does not account for the area that each grade occupies. Let's see if we can rework these observations scaled by area. 
 
-#### Bird observations per grade per area
+### Bird observations per grade per area
 ```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
 # join data and find obs per area of grade 
 holc_birds_area <-st_join(x = la_holc, y = la_birds, join = st_intersects, left = FALSE) %>% 
   filter(year == 2022) %>%
@@ -421,13 +423,5 @@ ggplot(data = holc_birds_area, aes(x = grade, y = obs_per_area, fill = grade)) +
   theme(legend.position = "none")
 ```
 
-
-
-
-Potential test that to use 
-```{r}
-test_that("All % values are above zero", {
-  expect_true(all(census_grades$percentage > 0))
-})
-```
+Now that we are able to see how many bird observations there are per (AREA UNIT), there is generally a higher percentage of observations in the higher groups (A and B) than the lower groups (C & D). The reason why this graph is almost the opposite of the previous is because the lower grades take on a much larger area than the higher grades. Now, these results are much more consistent with the findings from Ellis-Soto et al. 2023. 
 
