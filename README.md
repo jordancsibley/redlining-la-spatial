@@ -2,6 +2,8 @@
 
 ### Environmental Data Science 223, HW #2
 
+![Map of Los Angeles county with the HOLC neighborhoods highlighted](images/map.png)
+
 
 ## Description 
 
