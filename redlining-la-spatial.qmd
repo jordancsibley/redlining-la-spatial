@@ -1,6 +1,6 @@
 ---
-title: "Homework Assignment #2"
-subtitle: "Exploring patterns of environmental justice"
+title: "Exploring patterns of environmental justice"
+subtitle: "Homework Assignment #2"
 author: "Jordan Sibley"
 date: last-modified
 execute: 
